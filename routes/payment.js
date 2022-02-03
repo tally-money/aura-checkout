@@ -1,48 +1,69 @@
-const { setData, getData } = require("../utils/cache");
+const { authGuard } = require("../middleware");
 const { proxy } = require("../utils/proxy");
-const sleep = require("../utils/sleep");
 const {
   paymentRequestValidation,
 } = require("../validations/payment.validation");
 
 const Router = require("express").Router();
 
-Router.post("/reqestPayment", paymentRequestValidation, async (req, res) => {
+Router.post(
+  "/reqestPayment",
+  paymentRequestValidation,
+  authGuard,
+  async (req, res) => {
+    try {
+      const body = req.body;
+      const data = await proxy(
+        "payments",
+        {
+          source: {
+            type: "token",
+            token: body.token,
+          },
+          amount: body.amount,
+          currency: "GBP",
+          payment_type: "Regular",
+          reference: body.reference,
+          merchant_initiated: false,
+          customer: {
+            email: body.email,
+            name: body.customerName,
+          },
+          description: body.description,
+          capture: true,
+          "3ds": {
+            enabled: true,
+          },
+          metadata: body.metadata,
+          success_url: process.env.CHECKOUT_SUCCESS_URL,
+          failure_url: process.env.CHECKOUT_FAILURE_URL,
+        },
+        "POST",
+        {
+          Authorization: process.env.CHECKOUT_SECRET_KEY,
+        }
+      );
+      const response = {};
+      response["data"] = data;
+      response["status"] = 200;
+      response["success"] = true;
+      res.json(response).status(200).end();
+    } catch (error) {
+      return res.status(422).end();
+    }
+  }
+);
+
+Router.get("/paymentDetail/:sid", authGuard, async (req, res) => {
   try {
-    const body = req.body;
-    const data = await proxy(
-      "payments",
-      {
-        source: {
-          type: "token",
-          token: body.token,
-        },
-        amount: body.amount,
-        currency: "GBP",
-        payment_type: "Regular",
-        reference: "ORD-5023-4E89",
-        merchant_initiated: false,
-        description: "Set of 3 masks",
-        capture: true,
-        "3ds": {
-          enabled: true,
-        },
-        metadata: {
-          "tally-userId": "dsvdsvdsvdsvsd",
-        },
-      },
-      "POST",
-      {
-        Authorization: process.env.CHECKOUT_SECRET_KEY,
-      }
-    );
-    // await setData(data.id, false);
-    // console.log(await getData(data.id));
-    // while ((await getData(data.id)) == "false") {
-    //   await sleep(5000);
-    //   console.log("dvsdvsd");
-    // }
-    res.send(data);
+    const data = await proxy("payments/" + req.params.sid, {}, "GET", {
+      Authorization: process.env.CHECKOUT_SECRET_KEY,
+    });
+    const response = {};
+    response["data"] = data;
+    response["status"] = 200;
+    response["success"] = true;
+    res.json(response).status(200).end();
   } catch (error) {
     return res.status(422).end();
   }
