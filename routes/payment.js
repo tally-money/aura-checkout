@@ -1,9 +1,10 @@
 const { authGuard } = require("../middleware");
-const { proxy } = require("../utils/proxy");
+const { proxy, CHECKOUT_STATUS } = require("../utils/proxy");
 const {
   paymentRequestValidation,
 } = require("../validations/payment.validation");
 
+const sleep = require("../utils/sleep");
 const Router = require("express").Router();
 
 Router.post(
@@ -56,9 +57,20 @@ Router.post(
 
 Router.get("/paymentDetail/:sid", authGuard, async (req, res) => {
   try {
-    const data = await proxy("payments/" + req.params.sid, {}, "GET", {
+    let data = await proxy("payments/" + req.params.sid, {}, "GET", {
       Authorization: process.env.CHECKOUT_SECRET_KEY,
     });
+    let tries = 1;
+    while (
+      CHECKOUT_STATUS.includes(data.status) &&
+      tries <= process.env.RETRY_TIME
+    ) {
+      await sleep(process.env.RETRY_DELAY);
+      data = await proxy("payments/" + req.params.sid, {}, "GET", {
+        Authorization: process.env.CHECKOUT_SECRET_KEY,
+      });
+      tries = tries + 1;
+    }
     const response = {};
     response["data"] = data;
     response["status"] = 200;

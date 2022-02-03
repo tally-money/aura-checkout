@@ -14,3 +14,5 @@ module.exports.proxy = async (url, data, method = "GET", headers = {}) => {
   const response = await axios(config);
   return response.data;
 };
+
+module.exports.CHECKOUT_STATUS = ["Pending", "Authorized", "Card Verified"];

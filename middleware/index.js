@@ -1,6 +1,6 @@
 module.exports.authGuard = (req, res, next) => {
   try {
-    const token = req.headers["accessToken"];
+    const token = req.headers["accesstoken"];
     if (token != process.env.TALLY_RANDOM_SALT) {
       res
         .status(401)
