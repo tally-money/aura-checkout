@@ -100,7 +100,7 @@ Router.get("/paymentDetail/:sid", authGuard, async (req, res) => {
     );
     while (
       CHECKOUT_STATUS.includes(data.status) &&
-      tries <= process.env.RETRY_TIME
+      tries <= process.env.NO_OF_RETRIES
     ) {
       log(
         "get payment detail sleeping for 200 ms with retry no." + tries,
@@ -109,7 +109,7 @@ Router.get("/paymentDetail/:sid", authGuard, async (req, res) => {
         "_payment",
         req.apiGateway.context.awsRequestId
       );
-      await sleep(process.env.RETRY_DELAY);
+      await sleep(process.env.RETRY_DELAY_TIME);
       data = await proxy("payments/" + req.params.sid, {}, "GET", {
         Authorization: process.env.CHECKOUT_SECRET_KEY,
       });
