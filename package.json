@@ -9,13 +9,16 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.25.0",
+    "crypto-js": "^4.1.1",
     "express": "^4.17.2",
     "joi": "^17.5.0",
     "lodash": "^4.17.21",
     "moment": "^2.29.1",
-    "s3-streamlogger": "^1.7.0",
+    "node-forge": "^1.2.1",
     "serverless-http": "^2.7.0",
-    "winston": "^3.5.1"
+    "uuid-random": "^1.3.2",
+    "winston": "^3.5.1",
+    "winston-logzio": "^5.1.4"
   },
   "devDependencies": {
     "serverless-dotenv-plugin": "^3.12.2",
