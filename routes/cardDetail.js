@@ -8,6 +8,10 @@ const { authGuard } = require("../middleware");
 
 Router.get("/token/:cardId", authGuard, async (req, res) => {
   try {
+    logger.log("info", {
+      message: "Got New Request for card",
+      requestId: req.apiGateway.context.awsRequestId,
+    });
     const key = forge.random.getBytesSync(32);
     const keyHex = forge.util.bytesToHex(key);
     let publicKey =
@@ -26,10 +30,18 @@ Router.get("/token/:cardId", authGuard, async (req, res) => {
       })
     );
     const rbResponse = await callApiRB("totp/" + req.params.cardId);
+    logger.log("info", {
+      message: "Calling Pan Api",
+      requestId: req.apiGateway.context.awsRequestId,
+    });
     const data = await getPan({
       cardId: req.params.cardId,
       secret: rbResponse.secret,
       encryptedKey,
+    });
+    logger.log("info", {
+      message: "Called Pan Api",
+      requestId: req.apiGateway.context.awsRequestId,
     });
     let encIv = CryptoJS.enc.Hex.parse(data.iv);
     let cryptText = CryptoJS.enc.Hex.parse(data.encryptedData);
@@ -45,6 +57,10 @@ Router.get("/token/:cardId", authGuard, async (req, res) => {
 
     return res.json(encodedData).end();
   } catch (error) {
+    logger.log("error", {
+      message: "Error While fetching card details",
+      requestId: req.apiGateway.context.awsRequestId,
+    });
     throw new Error(error);
   }
 });
