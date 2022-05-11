@@ -16,7 +16,7 @@ module.exports.authGuard = (req, res, next) => {
         .send({ message: "UNAUTHORIZED_USER_ACCESS", data: {}, status: 401 });
     } else {
       log(
-        "Got Access for service call",
+        "Got Access for service",
         {},
         "info",
         "_middleware",
