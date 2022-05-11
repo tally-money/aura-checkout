@@ -8,14 +8,13 @@
   },
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.25.0",
     "express": "^4.17.2",
     "joi": "^17.5.0",
     "lodash": "^4.17.21",
+    "logzio-nodejs": "^2.0.3",
     "moment": "^2.29.1",
-    "s3-streamlogger": "^1.7.0",
     "serverless-http": "^2.7.0",
-    "winston": "^3.5.1"
+    "stripe": "^8.220.0"
   },
   "devDependencies": {
     "serverless-dotenv-plugin": "^3.12.2",

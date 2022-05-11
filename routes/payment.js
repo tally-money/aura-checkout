@@ -1,15 +1,14 @@
 const { authGuard } = require("../middleware");
-const { proxy, CHECKOUT_STATUS } = require("../utils/proxy");
 const {
   paymentRequestValidation,
 } = require("../validations/payment.validation");
 
-const sleep = require("../utils/sleep");
 const { log } = require("../utils/logger");
 const Router = require("express").Router();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 Router.post(
-  "/reqestPayment",
+  "/create-payment-intent",
   paymentRequestValidation,
   authGuard,
   async (req, res) => {
@@ -21,50 +20,20 @@ Router.post(
         "_payment",
         req.apiGateway.context.awsRequestId
       );
-      const body = req.body;
-      const data = await proxy(
-        "payments",
-        {
-          source: {
-            type: "token",
-            token: body.token,
-          },
-          amount: body.amount,
-          currency: "GBP",
-          payment_type: "Regular",
-          reference: body.reference,
-          merchant_initiated: false,
-          customer: {
-            email: body.email,
-            name: body.customerName,
-          },
-          description: body.description,
-          capture: true,
-          "3ds": {
-            enabled: true,
-            attempt_n3d: true,
-          },
-          metadata: body.metadata,
-          success_url: process.env.CHECKOUT_SUCCESS_URL,
-          failure_url: process.env.CHECKOUT_FAILURE_URL,
-        },
-        "POST",
-        {
-          Authorization: process.env.CHECKOUT_SECRET_KEY,
-        }
-      );
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: req.body.amount,
+        currency: "gbp",
+        payment_method_types: ["card"],
+      });
       log(
         "payment request completed!",
-        { ...req.body, paymentId: data.id },
+        { ...req.body, paymentId: paymentIntent.id },
         "info",
         "_payment",
         req.apiGateway.context.awsRequestId
       );
-      const response = {};
-      response["data"] = data;
-      response["status"] = 200;
-      response["success"] = true;
-      res.json(response).status(200).end();
+
+      res.json(paymentIntent).status(200).end();
     } catch (error) {
       log(
         "payment request failed!",
@@ -78,59 +47,29 @@ Router.post(
   }
 );
 
-Router.get("/paymentDetail/:sid", authGuard, async (req, res) => {
+Router.get("/payment-intent-status/:pid", authGuard, async (req, res) => {
   log(
     "get payment detail",
-    { paymentId: req.params.sid },
+    { paymentId: req.params.pid },
     "info",
     "_payment",
     req.apiGateway.context.awsRequestId
   );
   try {
-    let data = await proxy("payments/" + req.params.sid, {}, "GET", {
-      Authorization: process.env.CHECKOUT_SECRET_KEY,
-    });
-    let tries = 1;
+    const paymentIntent = await stripe.paymentIntents.retrieve(req.params.pid);
     log(
       "get payment detail called",
-      { paymentId: req.params.sid, status: data.status },
+      { paymentId: req.params.pid, status: paymentIntent.status },
       "info",
       "_payment",
       req.apiGateway.context.awsRequestId
     );
-    while (
-      CHECKOUT_STATUS.includes(data.status) &&
-      tries <= process.env.NO_OF_RETRIES
-    ) {
-      log(
-        "get payment detail sleeping for 200 ms with retry no." + tries,
-        { paymentId: req.params.sid, status: data.status },
-        "info",
-        "_payment",
-        req.apiGateway.context.awsRequestId
-      );
-      await sleep(process.env.RETRY_DELAY_TIME);
-      data = await proxy("payments/" + req.params.sid, {}, "GET", {
-        Authorization: process.env.CHECKOUT_SECRET_KEY,
-      });
-      tries = tries + 1;
-    }
-    const response = {};
-    response["data"] = data;
-    response["status"] = 200;
-    response["success"] = true;
-    log(
-      "get payment detail complete",
-      { paymentId: req.params.sid, status: data.status },
-      "info",
-      "_payment",
-      req.apiGateway.context.awsRequestId
-    );
-    res.json(response).status(200).end();
+
+    res.json(paymentIntent).status(200).end();
   } catch (error) {
     log(
       "get payment detail failed!",
-      { paymentId: req.params.sid },
+      { paymentId: req.params.pid },
       "error",
       "_payment",
       req.apiGateway.context.awsRequestId
