@@ -15,7 +15,7 @@ Router.post(
     try {
       log(
         "Initialize payment request",
-        req.body,
+        { ...req.body, userId: req.headers.userid },
         "info",
         "_payment",
         req.apiGateway.context.awsRequestId
@@ -27,7 +27,11 @@ Router.post(
       });
       log(
         "payment request completed!",
-        { ...req.body, paymentId: paymentIntent.id },
+        {
+          ...req.body,
+          paymentId: paymentIntent.id,
+          userId: req.headers.userid,
+        },
         "info",
         "_payment",
         req.apiGateway.context.awsRequestId
@@ -37,7 +41,7 @@ Router.post(
     } catch (error) {
       log(
         "payment request failed!",
-        req.body,
+        { ...req.body, userId: req.headers.userid },
         "error",
         "_payment",
         req.apiGateway.context.awsRequestId
@@ -55,11 +59,16 @@ Router.get("/payment-intent-status/:pid", authGuard, async (req, res) => {
     "_payment",
     req.apiGateway.context.awsRequestId
   );
+
   try {
     const paymentIntent = await stripe.paymentIntents.retrieve(req.params.pid);
     log(
       "get payment detail called",
-      { paymentId: req.params.pid, status: paymentIntent.status },
+      {
+        paymentId: req.params.pid,
+        status: paymentIntent.status,
+        userId: req.headers.userid,
+      },
       "info",
       "_payment",
       req.apiGateway.context.awsRequestId
@@ -69,7 +78,8 @@ Router.get("/payment-intent-status/:pid", authGuard, async (req, res) => {
   } catch (error) {
     log(
       "get payment detail failed!",
-      { paymentId: req.params.pid },
+
+      { paymentId: req.params.pid, userId: req.headers.userid },
       "error",
       "_payment",
       req.apiGateway.context.awsRequestId
